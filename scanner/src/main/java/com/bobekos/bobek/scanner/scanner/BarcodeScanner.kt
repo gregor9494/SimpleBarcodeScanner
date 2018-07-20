@@ -46,22 +46,30 @@ internal class BarcodeScanner(
                 if (context == null && !emitter.isDisposed) {
                     emitter.onError(NullPointerException("Context is null"))
                 } else {
-                    camera.init(barcodeDetector).getCameraSource()?.start(holder)
-                    camera.setParametersFromConfig()
+                    try {
+                        camera.init(barcodeDetector).getCameraSource()?.start(holder)
+                        camera.setParametersFromConfig()
 
-                    val tracker = BarcodeTracker(emitter)
-                    val processor = MultiProcessor.Builder(BarcodeTrackerFactory(tracker)).build()
-                    barcodeDetector.setProcessor(processor)
+                        val tracker = BarcodeTracker(emitter)
+                        val processor = MultiProcessor.Builder(BarcodeTrackerFactory(tracker)).build()
+                        barcodeDetector.setProcessor(processor)
 
-                    emitter.setCancellable {
-                        updateDisposable?.dispose()
-                        camera.getCameraSource()?.release()
+                        emitter.setCancellable {
+                            try {
+                                updateDisposable?.dispose()
+                                camera.getCameraSource()?.release()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+
+                        updateDisposable = updateSubject.subscribe(
+                                {
+                                    camera.setParametersFromConfig()
+                                }, {})
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-
-                    updateDisposable = updateSubject.subscribe(
-                            {
-                                camera.setParametersFromConfig()
-                            }, {})
                 }
             }
         }
